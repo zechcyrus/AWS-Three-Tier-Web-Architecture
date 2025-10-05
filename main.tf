@@ -101,4 +101,87 @@ resource "aws_eip" "eip2" {
   domain = "vpc"
 }
 
-//Route Tables
+//Route Tables for Public Subnets
+resource "aws_route_table" "RT_Public" {
+  vpc_id = aws_vpc.myVPC.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.myIGW.id
+  }
+}
+
+resource "aws_route_table_association" "RT_PublicSub1" {
+  subnet_id = aws_subnet.public_subnet1.id
+  route_table_id = aws_route_table.RT_Public.id
+}
+
+resource "aws_route_table_association" "RT_PublicSub2" {
+  subnet_id = aws_subnet.public_subnet2.id
+  route_table_id = aws_route_table.RT_Public.id
+}
+
+//Routes Tables for Private Subnets
+resource "aws_route_table" "RT_Private1" {
+  vpc_id = aws_vpc.myVPC.id
+
+  route = {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.NAT_AZ1.id
+  }
+
+  tags = {
+    Name = "PrivateRT-AZ1"
+  }
+}
+
+resource "aws_route_table_association" "RT_PrivateSub1" {
+  subnet_id = aws_subnet.app_private_subnet1.id
+  route_table_id = aws_route_table.RT_Private1.id
+}
+
+resource "aws_route_table" "RT_Private2" {
+  vpc_id = aws_vpc.myVPC.id
+
+  route = {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.NAT_AZ2.id
+  }
+
+  tags = {
+    Name = "PrivateRT-AZ2"
+  }
+}
+
+resource "aws_route_table_association" "RT_PrivateSub2" {
+  subnet_id = aws_subnet.app_private_subnet2.id
+  route_table_id = aws_route_table.RT_Private2.id
+}
+
+//Security Groups
+resource "aws_security_group" "internet-lb" {
+  name = "Internet-lb-sg"
+  description = "Internet Facing Load Balancer Security Group"
+  vpc_id = aws_vpc.myVPC.id
+
+  tags = {
+    Name = "Internet-lb"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "HTTP" {
+  security_group_id = aws_security_group.internet-lb.id
+  cidr_ipv4 = "0.0.0.0/0"
+  from_port = 80
+  ip_protocol = "tcp"
+  to_port = 80
+}
+
+resource "aws_vpc_security_group_egress_rule" "All_Traffic" {
+  security_group_id = aws_security_group.internet-lb.id
+  cidr_ipv4 = "0.0.0.0/0"
+  ip_protocol = "-1"
+}
+  
+
+
